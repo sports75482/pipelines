@@ -1,0 +1,12 @@
+name: AutoML Tabular Infra Validator
+inputs:
+- {name: model_path, type: Model}
+
+implementation:
+  container:
+    image: us-docker.pkg.dev/vertex-ai/automl-tabular/prediction-server:prod
+    args: [
+      --validate_infra_model_path,
+      {inputUri: model_path},
+      --read_path_from_file
+    ]

@@ -1,0 +1,82 @@
+name: AutoML Tabular Ensemble
+inputs:
+- {name: project, type: String}
+- {name: location, type: String}
+- {name: image_uri, type: String, default: "us-docker.pkg.dev/vertex-ai-restricted/automl-tabular/training:prod"}
+- {name: prediction_image_uri, type: String}
+- {name: root_dir, type: String}
+- {name: transform_output, type: TransformOutput}
+- {name: metadata, type: TabularExampleGenMetadata}
+- {name: dataset_schema, type: DatasetSchema}
+- {name: tuning_result_input, type: AutoMLTabularTuningResult}
+- {name: instance_baseline, type: AutoMLTabularInstanceBaseline}
+- {name: warmup_data, type: TabularDatasetSplit}
+- {name: encryption_spec_key_name, type: String, default: ""}
+- {name: export_additional_model_without_custom_ops, type: Boolean, default: "false"}
+
+outputs:
+- {name: gcp_resources, type: String}
+- {name: model_architecture, type: AutoMLTabularModelArchitecture}
+- {name: model, type: Model}
+- {name: model_without_custom_ops, type: Model}
+- {name: model_uri, type: String}
+- {name: instance_schema_uri, type: String}
+- {name: prediction_schema_uri, type: String}
+- {name: explanation_metadata, type: JsonObject}
+- {name: explanation_parameters, type: JsonObject}
+
+implementation:
+  container:
+    image: gcr.io/ml-pipeline/google-cloud-pipeline-components:0.1.7
+    command: [python3, -u, -m, google_cloud_pipeline_components.experimental.remote.gcp_launcher.launcher]
+    args: [
+      --type, CustomJob,
+      --project, {inputValue: project},
+      --location, {inputValue: location},
+      --gcp_resources, {outputPath: gcp_resources},
+      --payload,
+      concat: [
+        '{"display_name": "automl-tabular-ensemble-{{$.pipeline_job_uuid}}-{{$.pipeline_task_uuid}}", "encryption_spec": {"kms_key_name":"',
+        {inputValue: encryption_spec_key_name},
+        '"}, "job_spec": {"worker_pool_specs": [{"replica_count": 1, "machine_spec": {"machine_type": "n1-highmem-8"}, "container_spec": {"image_uri":"',
+        {inputValue: image_uri},
+        '", "args": ["ensemble", "--transform_output_path=',
+        {inputUri: transform_output},
+        '", "--model_output_path=',
+        {inputValue: root_dir},
+        '/{{$.pipeline_job_uuid}}/{{$.pipeline_task_uuid}}/model", "--custom_model_output_path=',
+        {inputValue: root_dir},
+        '/{{$.pipeline_job_uuid}}/{{$.pipeline_task_uuid}}/custom_model", "--error_file_path=',
+        {inputValue: root_dir},
+        '/{{$.pipeline_job_uuid}}/{{$.pipeline_task_uuid}}/error.pb", "--export_custom_model=',
+        {inputValue: export_additional_model_without_custom_ops},
+        '", "--metadata_path=',
+        {inputUri: metadata},
+        '", "--dataset_schema_path=',
+        {inputUri: dataset_schema},
+        '", "--tuning_result_input_path=',
+        {inputUri: tuning_result_input},
+        '", "--instance_baseline_path=',
+        {inputUri: instance_baseline},
+        '", "--warmup_data=',
+        {inputUri: warmup_data},
+        '", "--prediction_docker_uri=',
+        {inputValue: prediction_image_uri},
+        '", "--model_path=',
+        {outputUri: model},
+        ',',
+        {outputPath: model_uri},
+        '", "--custom_model_path=',
+        {outputUri: model_without_custom_ops},
+        '", "--instance_schema_uri=',
+        {outputPath: instance_schema_uri},
+        '", "--prediction_schema_uri=',
+        {outputPath: prediction_schema_uri},
+        '", "--explanation_metadata_path=',
+        {outputPath: explanation_metadata},
+        '", "--explanation_parameters_path=',
+        {outputPath: explanation_parameters},
+        '", "--model_architecture_path=',
+        {outputUri: model_architecture},
+        '", "--use_json=true"]}}]}}'
+      ]]

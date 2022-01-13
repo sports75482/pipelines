@@ -1,0 +1,32 @@
+name: AutoML Tabular Finalizer
+inputs:
+- {name: project, type: String}
+- {name: location, type: String}
+- {name: image_uri, type: String, default: "us-docker.pkg.dev/vertex-ai-restricted/automl-tabular/training:prod"}
+- {name: root_dir, type: String}
+- {name: encryption_spec_key_name, type: String, default: ""}
+
+outputs:
+- {name: gcp_resources, type: String}
+
+implementation:
+  container:
+    image: gcr.io/ml-pipeline/google-cloud-pipeline-components:0.1.7
+    command: [python3, -u, -m, google_cloud_pipeline_components.experimental.remote.gcp_launcher.launcher]
+    args: [
+      --type, CustomJob,
+      --project, {inputValue: project},
+      --location, {inputValue: location},
+      --gcp_resources, {outputPath: gcp_resources},
+      --payload,
+      concat: [
+        '{"display_name": "automl-tabular-finalizer-{{$.pipeline_job_uuid}}-{{$.pipeline_task_uuid}}", "encryption_spec": {"kms_key_name":"',
+        {inputValue: encryption_spec_key_name},
+        '"}, "job_spec": {"worker_pool_specs": [{"replica_count": 1, "machine_spec": {"machine_type": "n1-standard-8"}, "container_spec": {"image_uri":"',
+        {inputValue: image_uri},
+        '", "args": ["cancel_l2l_tuner", "--error_file_path=',
+        {inputValue: root_dir},
+        '/{{$.pipeline_job_uuid}}/{{$.pipeline_task_uuid}}/error.pb", "--cleanup_lro_job_infos=',
+        {inputValue: root_dir},
+        '/{{$.pipeline_job_uuid}}/lro"]}}]}}'
+      ]]
