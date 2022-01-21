@@ -41,6 +41,7 @@ from google_cloud_pipeline_components.aiplatform import (
     ModelDeployOp,
     ModelExportOp,
     ModelUploadOp,
+    ModelDeleteOp,
 )
 
 
@@ -441,6 +442,33 @@ class ComponentsCompileTest(unittest.TestCase):
         with open(self._package_path) as f:
             executor_output_json = json.load(f, strict=False)
         with open('testdata/model_deploy_pipeline.json') as ef:
+            expected_executor_output_json = json.load(ef, strict=False)
+        # Ignore the kfp SDK & schema version during comparision
+        del executor_output_json['sdkVersion']
+        del executor_output_json['schemaVersion']
+        self.assertEqual(executor_output_json, expected_executor_output_json)
+
+
+    def test_model_delete_op_compile(self):
+
+        @kfp.dsl.pipeline(name="training-test")
+        def pipeline():
+            model_upload_op = ModelUploadOp(
+                project=self._project,
+                display_name=self._display_name,
+                serving_container_image_uri=self._serving_container_image_uri,
+                artifact_uri=self._artifact_uri)
+
+            model_delete_op = ModelDeleteOp(
+                model=model_upload_op.outputs["model"],
+            )
+
+        compiler.Compiler().compile(
+            pipeline_func=pipeline, package_path=self._package_path)
+
+        with open(self._package_path) as f:
+            executor_output_json = json.load(f, strict=False)
+        with open('testdata/model_delete_pipeline.json') as ef:
             expected_executor_output_json = json.load(ef, strict=False)
         # Ignore the kfp SDK & schema version during comparision
         del executor_output_json['sdkVersion']

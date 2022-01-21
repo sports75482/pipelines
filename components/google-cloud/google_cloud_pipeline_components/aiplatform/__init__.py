@@ -41,6 +41,7 @@ __all__ = [
     'AutoMLVideoTrainingJobRunOp',
     'ModelDeployOp',
     'ModelBatchPredictOp',
+    'ModelDeleteOp',
     'ModelExportOp',
     'ModelUploadOp',
     'EndpointCreateOp',
@@ -139,6 +140,10 @@ AutoMLVideoTrainingJobRunOp = utils.convert_method_to_component(
     aiplatform_sdk.AutoMLVideoTrainingJob,
     aiplatform_sdk.AutoMLVideoTrainingJob.run,
 )
+
+ModelDeleteOp = load_component_from_file(
+    os.path.join(
+        os.path.dirname(__file__), 'model/delete_model/component.yaml'))
 
 ModelExportOp = load_component_from_file(
     os.path.join(
